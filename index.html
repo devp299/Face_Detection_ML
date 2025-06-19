@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Attendance System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --text-color: #ffffff;
+            --accent-color: #007bff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(4px);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group select {
+            color: black;
+            /* background-color: #f5f5f5;  */
+            /* border: 1px solid #ccc;  */
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+
+        select, input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .btn-add-course {
+            background-color: #28a745;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 500px;
+            color: black;
+        }
+
+        .modal-content input {
+            color: black; /* Set text color to black */
+            background-color: #f5f5f5; /* Optional: Make the background lighter for better contrast */
+            border: 1px solid #ccc; /* Optional: Add a visible border */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Face Recognition Attendance</h1>
+        
+        <div class="form-group">
+            <label for="course-select">Select Course</label>
+            <select id="course-select">
+                <option value="">Choose a Course</option>
+                {% for course in courses %}
+                <option value="{{ course['Course Code'] }}">{{ course['Course Name'] }} ({{ course['Course Code'] }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="button-container">
+            <button class="btn" onclick="startAttendance()">
+                <i class="fas fa-play"></i> Start Attendance
+            </button>
+            <button class="btn" onclick="stopAttendance()">
+                <i class="fas fa-stop"></i> Stop Attendance
+            </button>
+            <button class="btn" onclick="window.location.href='/attendance'">
+                <i class="fas fa-file-download"></i> View Attendance
+            </button>
+        </div>
+
+        <div class="button-container">
+            <button class="btn btn-add-course" onclick="openAddCourseModal()">
+                <i class="fas fa-plus"></i> Add New Course
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Course Modal -->
+    <div id="addCourseModal" class="modal">
+        <div class="modal-content">
+            <h2>Add New Course</h2>
+            <div class="form-group">
+                <label for="new-course-name">Course Name</label>
+                <input type="text" id="new-course-name" placeholder="Enter Course Name">
+            </div>
+            <div class="form-group">
+                <label for="new-course-code">Course Code</label>
+                <input type="text" id="new-course-code" placeholder="Enter Course Code">
+            </div>
+            <div class="button-container">
+                <button class="btn" onclick="addCourse()">Add Course</button>
+                <button class="btn" onclick="closeAddCourseModal()" style="background-color: #dc3545;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function startAttendance() {
+            const courseSelect = document.getElementById('course-select');
+            const course = courseSelect.value;
+            
+            if (!course) {
+                alert('Please select a course');
+                return;
+            }
+
+            fetch('/start', { 
+                method: 'POST',
+                body: new URLSearchParams({course: course})
+            })
+                .then(response => response.json())
+                .then(data => alert(data.message))
+                .catch(err => alert("Error: " + err));
+        }
+
+        function stopAttendance() {
+            fetch('/stop', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => alert(data.message))
+                .catch(err => alert("Error: " + err));
+        }
+
+        function openAddCourseModal() {
+            document.getElementById('addCourseModal').style.display = 'flex';
+        }
+
+        function closeAddCourseModal() {
+            document.getElementById('addCourseModal').style.display = 'none';
+        }
+
+        function addCourse() {
+            const courseName = document.getElementById('new-course-name').value;
+            const courseCode = document.getElementById('new-course-code').value;
+
+            if (!courseName || !courseCode) {
+                alert('Please enter both course name and course code');
+                return;
+            }
+
+            fetch('/add_course', {
+                method: 'POST',
+                body: new URLSearchParams({
+                    course_name: courseName,
+                    course_code: courseCode
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    // Refresh the page to update course dropdown
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => alert("Error: " + err));
+        }
+    </script>
+</body>
+</html>
